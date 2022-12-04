@@ -60,13 +60,28 @@ void VM_Version::get_os_cpu_info() {
   assert(cpu_has("hw.optional.neon"), "should be");
   _features = CPU_FP | CPU_ASIMD;
 
-  // All Apple-darwin Arm processors have AES and PMULL.
-  _features |= CPU_AES | CPU_PMULL;
-
-  // Only few features are available via sysctl, see line 614
-  // https://opensource.apple.com/source/xnu/xnu-6153.141.1/bsd/kern/kern_mib.c.auto.html
-  if (cpu_has("hw.optional.armv8_crc32"))     _features |= CPU_CRC32;
-  if (cpu_has("hw.optional.armv8_1_atomics")) _features |= CPU_LSE;
+  // All Apple-darwin Arm processors have AES and PMULL, SHA1 and SHA2.
+  _features |= CPU_AES | CPU_PMULL | CPU_SHA1 | CPU_SHA2;
+  
+  // Only few features are available via sysctl.
+  // See https://github.com/apple/darwin-xnu/blob/main/bsd/kern/kern_mib.c#L855
+  // Regarding SHA512 and SHA3, there are two sysctl flags for them, which
+  // might be invented at different times. We check both here.
+  // See https://git.tartarus.org/?p=simon/putty.git;a=blob_plain;f=unix/utils/arm_arch_queries.c;hb=HEAD
+  if (cpu_has("hw.optional.armv8_crc32")) {
+    _features |= CPU_CRC32;
+  }
+  if (cpu_has("hw.optional.armv8_1_atomics")) {
+    _features |= CPU_LSE;
+  }
+  if (cpu_has("hw.optional.arm.FEAT_SHA512") ||
+      cpu_has("hw.optional.armv8_2_sha512")) {
+    _features |= CPU_SHA512;
+  }
+  if (cpu_has("hw.optional.arm.FEAT_SHA3") ||
+      cpu_has("hw.optional.armv8_2_sha3")) {
+    _features |= CPU_SHA3;
+  }
 
   int cache_line_size;
   int hw_conf_cache_line[] = { CTL_HW, HW_CACHELINE };
